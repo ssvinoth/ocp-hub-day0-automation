@@ -1,0 +1,21 @@
+apiVersion: logging.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: instance
+  namespace: {{ ocp_logging_namespace | default('openshift-logging') }}
+spec:
+  outputs:
+    - name: remote-elasticsearch
+      secret:
+        name: {{ ext_es_secret }}
+      type: elasticsearch
+      url: >-
+        https://{{ es_route_host }}:443
+  pipelines:
+    - inputRefs:
+        - infrastructure
+      labels:
+        cluster: rhacm-cluster
+      name: forward-to-remote
+      outputRefs:
+        - remote-elasticsearch

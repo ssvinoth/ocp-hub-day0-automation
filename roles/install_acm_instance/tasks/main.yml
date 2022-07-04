@@ -1,0 +1,25 @@
+- name: set ocp connection
+  set_fact:
+    ocp_conn: &ocp_conn_def
+      host: '{{ ocp_api_url }}'
+      api_key: '{{ ocp_api_token }}'
+      verify_ssl: '{{ ocp_api_verify_ssl }}'
+
+- name: Install Advanced cluster manager Instance {{ acm_multiclusterhub_instance_name }} in {{ acm_operator_namespace }} namespace
+  k8s:
+    <<: *ocp_conn_def
+    definition: "{{ lookup('kubernetes.core.kustomize', dir=kustomize_dir) }}"
+  vars:
+    kustomize_dir: '{{ role_path }}/files/kustomize_dirs/advanced-cluster-management/instance/base' 
+
+- name: Wait for MultiClusterHub to be in running state
+  k8s_info:
+    <<: *ocp_conn_def
+    api_version: operator.open-cluster-management.io/v1
+    kind: MultiClusterHub
+    name: "{{ acm_multiclusterhub_instance_name }}"
+    namespace: "{{ acm_operator_namespace }}"
+  register: result
+  until: result | json_query("resources[0].status.phase=='Running'")
+  retries: 100
+  delay: 10

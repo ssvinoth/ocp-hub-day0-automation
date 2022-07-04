@@ -1,0 +1,10 @@
+# precheck_wait_secs: 10
+# wait_for_subscription_delay: 10
+# wait_for_subscription_retries: 100
+
+ocp_logging_namespace: 'openshift-logging'
+
+es_namespace: 'elastic-monitoring'
+es_route_name: 'elasticsearch-https'
+es_creds_secret: 'elasticsearch-es-elastic-user'
+ext_es_secret: 'external-elasticsearch-credentials'

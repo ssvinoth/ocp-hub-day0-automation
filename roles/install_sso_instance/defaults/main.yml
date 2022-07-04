@@ -1,0 +1,7 @@
+# precheck_wait_secs: 10
+# wait_for_subscription_delay: 10
+# wait_for_subscription_retries: 100
+
+
+rh_sso_instance_name: 'rhsso'
+rh_sso_operator_ns: 'sso'

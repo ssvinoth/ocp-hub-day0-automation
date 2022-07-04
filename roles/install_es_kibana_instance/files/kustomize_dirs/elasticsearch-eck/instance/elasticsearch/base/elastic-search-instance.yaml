@@ -1,0 +1,39 @@
+kind: Elasticsearch
+apiVersion: elasticsearch.k8s.elastic.co/v1
+metadata:
+  name: elasticsearch
+  namespace: elastic-monitoring
+spec:
+  version: 7.12.0
+  nodeSets:
+    - name: default
+      config:
+        node.roles:
+          - master
+          - data
+        node.attr.attr_name: attr_value
+        node.store.allow_mmap: false
+      podTemplate:
+        metadata:
+          labels:
+            foo: bar
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  memory: 4Gi
+                  cpu: 1
+                limits:
+                  memory: 4Gi
+                  cpu: 2
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 100Gi
+      count: 3

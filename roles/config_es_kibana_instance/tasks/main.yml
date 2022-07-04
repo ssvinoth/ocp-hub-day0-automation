@@ -1,0 +1,84 @@
+- name: set ocp connection
+  set_fact:
+    ocp_conn: &ocp_conn_def
+      host: '{{ ocp_api_url }}'
+      api_key: '{{ ocp_api_token }}'
+      verify_ssl: '{{ ocp_api_verify_ssl }}'
+
+# We need to configure routes for both kibana and elasticsearch instances.
+# 1. We need to get the service ca.crt which we then pass to create the route
+# For ES: Cert to be taken from : secret `elasticsearch-es-http-certs-public` , `ca.crt` key
+# For Kibana : secret `kibana-kb-http-certs-public`, `ca.crt` key
+
+- name: Get elasticsearch-es-http-certs-public secret
+  k8s_info:
+    <<: *ocp_conn_def
+    api_version: v1
+    kind: Secret
+    name: "elasticsearch-es-http-certs-public"
+    namespace: "{{ es_namespace }}"
+  register: es_secret
+
+- name: debug es_secret
+  debug:
+    var: es_secret.resources[0].data["ca.crt"] | b64decode
+    verbosity: 2
+
+- name: retrieve elasticsearch service ca.crt
+  set_fact:
+    es_svc_ca: '{{ es_secret.resources[0].data["ca.crt"] | b64decode }}'
+
+- name: Get kibana-kb-http-certs-public secret
+  k8s_info:
+    <<: *ocp_conn_def
+    api_version: v1
+    kind: Secret
+    name: "kibana-kb-http-certs-public"
+    namespace: "{{ es_namespace }}"
+  register: kibana_secret
+
+- name: debug kibana_secret
+  debug:
+    var: kibana_secret.resources[0].data["ca.crt"] | b64decode
+    verbosity: 2
+
+- name: retrieve kibana service ca.crt
+  set_fact:
+    kibana_svc_ca: '{{ kibana_secret.resources[0].data["ca.crt"] | b64decode }}'
+
+- name: create routes for elasticsearch and kibana
+  kubernetes.core.k8s:
+    <<: *ocp_conn_def
+    state: present
+    definition:
+      apiVersion: route.openshift.io/v1
+      kind: Route
+      metadata:
+        name: "{{ item.name }}"
+        namespace: "{{ es_namespace }}"
+        labels: "{{ item.labels }}"
+      spec:
+        to:
+          kind: Service
+          name: "{{ item.svc_name }}"
+          weight: 100
+        port:
+          targetPort: https
+        tls:
+          termination: reencrypt
+          destinationCACertificate: "{{ item.dest_ca_crt }}"
+  loop:
+      - name: elasticsearch-https
+        svc_name: elasticsearch-es-http
+        dest_ca_crt: "{{ es_svc_ca }}"
+        route_host: elasticsearch-https
+        labels: 
+          common.k8s.elastic.co/type: elasticsearch
+          elasticsearch.k8s.elastic.co/cluster-name: elasticsearch
+      - name: kibana-https
+        svc_name: kibana-kb-http
+        dest_ca_crt: "{{ kibana_svc_ca }}"
+        route_host: kibana-https
+        labels: 
+          common.k8s.elastic.co/type: kibana
+          kibana.k8s.elastic.co/name: kibana  

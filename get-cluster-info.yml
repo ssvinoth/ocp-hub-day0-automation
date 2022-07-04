@@ -1,0 +1,18 @@
+---
+- name: install gitops operator on ocp cluster
+  hosts: localhost
+  gather_facts: false
+  vars:
+    ocp_conn: &ocp_conn_def
+      host: '{{ocp_api_url}}'
+      api_key: '{{ocp_api_token}}'
+      verify_ssl: '{{ocp_api_verify_ssl}}'     
+  tasks:
+    - name: Get Cluster information
+      kubernetes.core.k8s_cluster_info:
+        <<: *ocp_conn_def
+      register: api_status  
+
+    - name: debug information
+      debug:
+        var: api_status

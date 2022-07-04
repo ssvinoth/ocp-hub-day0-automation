@@ -1,0 +1,44 @@
+- name: set ocp connection
+  set_fact:
+    ocp_conn: &ocp_conn_def
+      host: '{{ ocp_api_url }}'
+      api_key: '{{ ocp_api_token }}'
+      verify_ssl: '{{ ocp_api_verify_ssl }}'
+
+- name: Install Elastic Search Instance - elasticsearch in elastic-monitoring namespace
+  k8s:
+    <<: *ocp_conn_def
+    definition: "{{ lookup('kubernetes.core.kustomize', dir=kustomize_dir) }}"
+  vars:
+    kustomize_dir: '{{ role_path }}/files/kustomize_dirs/elasticsearch-eck/instance/elasticsearch/base' 
+
+- name: Wait for elasticsearch instance to be in ready state
+  k8s_info:
+    <<: *ocp_conn_def
+    api_version: elasticsearch.k8s.elastic.co/v1
+    kind: Elasticsearch
+    name: "elasticsearch"
+    namespace: "elastic-monitoring"
+  register: es_result
+  until: es_result | json_query("resources[0].status.phase=='Ready'")
+  retries: 100
+  delay: 10
+
+- name: Install Kibana Instance - kibana in elastic-monitoring namespace
+  k8s:
+    <<: *ocp_conn_def
+    definition: "{{ lookup('kubernetes.core.kustomize', dir=kustomize_dir) }}"
+  vars:
+    kustomize_dir: '{{ role_path }}/files/kustomize_dirs/elasticsearch-eck/instance/kibana/base' 
+
+- name: Wait for kibana to be in ready state (health status as green)
+  k8s_info:
+    <<: *ocp_conn_def
+    api_version: kibana.k8s.elastic.co/v1
+    kind: Kibana
+    name: "kibana"
+    namespace: "elastic-monitoring"
+  register: kb_result
+  until: kb_result | json_query("resources[0].status.health=='green'")
+  retries: 100
+  delay: 10

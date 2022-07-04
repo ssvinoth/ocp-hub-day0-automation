@@ -1,0 +1,64 @@
+- name: set ocp connection
+  set_fact:
+    ocp_conn: &ocp_conn_def
+      host: '{{ ocp_api_url }}'
+      api_key: '{{ ocp_api_token }}'
+      verify_ssl: '{{ ocp_api_verify_ssl }}'
+
+- name: install acs central instance {{ acs_central_instance_name }} in {{ acs_central_ns }} namespace
+  k8s:
+    <<: *ocp_conn_def
+    state: present
+    definition: "{{ lookup('template', 'acs-central-instance.j2') | from_yaml }}"
+
+# TBD : Status.conditions[type=Deployed].status=true
+
+# status:
+#   central:
+#     adminPassword:
+#       adminPasswordSecretReference: central-htpasswd
+#       info: >-
+#         A password for the 'admin' user has been automatically generated and
+#         stored in the "password" entry of the central-htpasswd secret.
+
+#         To view the password see the secret reference field or run
+#           oc -n rhacs-operator get secret central-htpasswd -o go-template='{{index .data "password" | base64decode}}'
+#   conditions:
+#     - lastTransitionTime: '2022-07-04T04:08:14Z'
+#       message: |
+#         StackRox 3.70.1 has been installed.
+
+
+
+#         Thank you for using StackRox!
+#       reason: InstallSuccessful
+#       status: 'True'
+#       type: Deployed
+#     - lastTransitionTime: '2022-07-04T04:08:14Z'
+#       status: 'True'
+#       type: Initialized
+#     - lastTransitionTime: '2022-07-04T04:08:14Z'
+#       status: 'False'
+#       type: Irreconcilable
+#     - lastTransitionTime: '2022-07-04T04:08:14Z'
+#       message: No proxy configuration is desired
+#       reason: NoProxyConfig
+#       status: 'False'
+#       type: ProxyConfigFailed
+#     - lastTransitionTime: '2022-07-04T04:08:14Z'
+#       status: 'False'
+#       type: ReleaseFailed
+#   deployedRelease: {}
+#   productVersion: 3.70.1
+
+# - name: Wait for instance {{ acs_central_instance_name }} to be in running (deployed) state
+#   k8s_info:
+#     <<: *ocp_conn_def
+#     api_version: keycloak.org/v1alpha1
+#     kind: Keycloak
+#     name: "{{ rh_sso_instance_name }}"
+#     namespace: "{{ rh_sso_operator_ns }}"
+#   register: result
+#   until: result | json_query("resources[0].status.phase=='reconciling'")
+#   retries: 100
+#   delay: 10

@@ -1,0 +1,41 @@
+---
+- name: install required operators for day0 config of OCP hub cluster
+  hosts: localhost
+  gather_facts: false
+  vars:
+    day0_operators:
+      - operator_name: 'openshift-gitops-operator'
+        operator_namespace: 'openshift-operators'
+        kustomize_dir: 'openshift-gitops-operator/overlays/latest'
+
+      - operator_name: 'rhsso-operator'
+        operator_namespace: 'sso'
+        #kustomize_dir: 'roles/install_ocp_operator/kustomize_dirs/rhsso/operator/overlays/stable'
+        kustomize_dir: 'rhsso/operator/overlays/stable'
+
+      - operator_name: 'advanced-cluster-management'
+        operator_namespace: 'open-cluster-management'
+        kustomize_dir: 'advanced-cluster-management/operator/overlays/release-2.5'
+
+      - operator_name: 'rhacs-operator'
+        operator_namespace: 'rhacs-operator'
+        kustomize_dir: 'advanced-cluster-security-operator/operator/overlays/latest'
+
+      - operator_name: 'elasticsearch-eck-operator-certified'
+        operator_namespace: 'openshift-operators'
+        kustomize_dir: 'elasticsearch-eck/operator/overlays/stable'
+
+      - operator_name: 'cluster-logging'
+        operator_namespace: 'openshift-logging'
+        kustomize_dir: 'openshift-logging/operator/overlays/stable'                
+
+  tasks:
+    - name: install day0 operators
+      include_role:
+        name: install_ocp_operator
+      vars:
+        operator_name: "{{ item.operator_name }}"
+        operator_namespace: "{{ item.operator_namespace }}"
+        kustomize_dir: "{{ role_path }}/files/kustomize_dirs/{{ item.kustomize_dir }}"
+        precheck_wait_secs: 20
+      loop: "{{ day0_operators }}"

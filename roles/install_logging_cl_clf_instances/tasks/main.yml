@@ -1,0 +1,85 @@
+- name: set ocp connection
+  set_fact:
+    ocp_conn: &ocp_conn_def
+      host: '{{ ocp_api_url }}'
+      api_key: '{{ ocp_api_token }}'
+      verify_ssl: '{{ ocp_api_verify_ssl }}'
+
+- name: Install ClusterLogging instance 
+  k8s:
+    <<: *ocp_conn_def
+    state: present
+    definition: "{{ lookup('template', 'cluster-logging.j2') | from_yaml }}"
+
+# Install ClusterLoggingForwarder Instance
+    # We need two things before creating the instance
+    # 1. We need the Elastic search route URL
+    # 2. We need Elastic search credentials
+
+- name: Get the route "{{ es_route_name }}" details
+  k8s_info:
+    <<: *ocp_conn_def
+    api_version: route.openshift.io/v1
+    kind: Route
+    name: "{{ es_route_name }}"
+    namespace: "{{ es_namespace }}"
+  register: es_route
+
+- name: retrieve "{{ es_route_name }}" host url
+  set_fact:
+    es_route_host: "{{ es_route | json_query(route_jquery) }}"
+  vars:
+    route_jquery: "resources[0].spec.host"
+    
+- name: make sure the es route host is not empty
+  fail:
+    msg: "{{ es_route_name }} host is empty"
+  when: es_route_host | length == 0
+
+- name: print "{{ es_route_name }}" host
+  ansible.builtin.debug:
+    var: es_route_host
+
+# get the username password and create a new secret. elasticsearch-es-elastic-user
+- name: Get {{ es_creds_secret }} secret
+  k8s_info:
+    <<: *ocp_conn_def
+    api_version: v1
+    kind: Secret
+    name: "{{ es_creds_secret }}"
+    namespace: "{{ es_namespace }}"
+  register: es_creds_details      
+
+- name: debug {{ es_creds_secret }}
+  debug:
+    msg: "{{ es_creds_details.resources[0].data | dict2items | first }}"
+    verbosity: 2
+
+- name: retrieve elasticsearch credentials
+  set_fact:
+    es_creds: '{{ es_creds_details.resources[0].data | dict2items | first }}'
+
+- name: create a new secret {{ ext_es_secret }} in {{ ocp_logging_namespace }}
+  k8s:
+    <<: *ocp_conn_def
+    state: present
+    definition: "{{ lookup('template', 'templates/openshift-logging/clf_es_secret.j2') | from_yaml }}"      
+
+# finally, lets create the new clusterloggingforwarder instance
+- name: create a new ClusterLoggingForwarder instance
+  k8s:
+    <<: *ocp_conn_def
+    state: present
+    definition: "{{ lookup('template', 'clusteloggingforwarder-instance.j2') | from_yaml }}"       
+
+- name: Wait for cluster daemonset to have atleast one pod ready
+  k8s_info:
+    <<: *ocp_conn_def
+    api_version: apps/v1
+    kind: DaemonSet
+    name: "collector"
+    namespace: "{{ ocp_logging_namespace }}"
+  register: result
+  until: result | json_query("resources[0].status.numberReady!='0'")
+  retries: 100
+  delay: 10

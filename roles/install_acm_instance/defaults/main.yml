@@ -1,0 +1,6 @@
+precheck_wait_secs: 10
+wait_for_subscription_delay: 10
+wait_for_subscription_retries: 100
+
+acm_operator_namespace: 'open-cluster-management'
+acm_multiclusterhub_instance_name: 'multiclusterhub'

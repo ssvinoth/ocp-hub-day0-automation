@@ -1,0 +1,24 @@
+- name: set ocp connection
+  set_fact:
+    ocp_conn: &ocp_conn_def
+      host: '{{ ocp_api_url }}'
+      api_key: '{{ ocp_api_token }}'
+      verify_ssl: '{{ ocp_api_verify_ssl }}'
+
+- name: install keycloak instance {{ rh_sso_instance_name }} in {{ rh_sso_operator_ns }} namespace
+  k8s:
+    <<: *ocp_conn_def
+    state: present
+    definition: "{{ lookup('template', 'rh-sso-keycloak-instance.j2') | from_yaml }}"
+
+- name: Wait for keycloak instance {{ rh_sso_instance_name }} to be in running (reconciling) state
+  k8s_info:
+    <<: *ocp_conn_def
+    api_version: keycloak.org/v1alpha1
+    kind: Keycloak
+    name: "{{ rh_sso_instance_name }}"
+    namespace: "{{ rh_sso_operator_ns }}"
+  register: result
+  until: result | json_query("resources[0].status.phase=='reconciling'")
+  retries: 100
+  delay: 10

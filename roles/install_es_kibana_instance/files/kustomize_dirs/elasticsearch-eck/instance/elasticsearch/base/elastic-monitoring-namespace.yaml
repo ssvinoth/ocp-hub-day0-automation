@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: elastic-monitoring
+  labels:
+    openshift.io/cluster-monitoring: "true"
+  annotations:
+    openshift.io/description: "Elastic Search monitorning namespace"
+    openshift.io/display-name: "Elastic Search monitorning"

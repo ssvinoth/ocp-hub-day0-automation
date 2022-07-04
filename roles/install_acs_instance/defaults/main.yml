@@ -1,0 +1,7 @@
+# precheck_wait_secs: 10
+# wait_for_subscription_delay: 10
+# wait_for_subscription_retries: 100
+
+
+acs_central_instance_name: 'stackrox-central-services'
+acs_central_ns: 'rhacs-operator'

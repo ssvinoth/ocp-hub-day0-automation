@@ -1,0 +1,60 @@
+- name: set ocp connection
+  set_fact:
+    ocp_conn: &ocp_conn_def
+      host: '{{ ocp_api_url }}'
+      api_key: '{{ ocp_api_token }}'
+      verify_ssl: '{{ ocp_api_verify_ssl }}'
+
+- name: Install {{ operator_name }} operator in {{ operator_namespace }} namespace
+  k8s:
+    <<: *ocp_conn_def
+    definition: "{{ lookup('kubernetes.core.kustomize', dir=kustomize_dir) }}"
+  register: operator_installation
+  
+# We don't know the exact version installed. Let's fetch it. 
+# Assumption : There is only one operator of the same name in the namespace. 
+# If multiple operators starting with same operator name is present then the first one will be picked up. 
+# But this is going to be highly unlikely.
+- name: Sleep for 10 seconds to wait for the {{ operator_name }} operator to start installing
+  ansible.builtin.wait_for:
+    timeout: "{{ precheck_wait_secs }}"
+  delegate_to: localhost
+  when: operator_installation.changed
+
+- name: Get a list of all ClusterServiceVersion objects in "{{ operator_namespace }}" namespace
+  kubernetes.core.k8s_info:
+    <<: *ocp_conn_def
+    api_version: operators.coreos.com/v1alpha1
+    kind: ClusterServiceVersion
+    namespace: "{{ operator_namespace }}"
+  register: csv_list
+
+- name: print list of all ClusterServiceVersion objects
+  debug:
+    var: csv_list
+    verbosity: 2
+
+- name: Get operator full name with version
+  set_fact:
+    operator_full_name: "{{ csv_list | json_query(name_jquery) }}"
+  vars:
+    name_jquery: "resources[?starts_with(metadata.name,'{{ operator_name }}')].metadata.name | [0]"
+
+- name: print operator_full_name
+  debug:
+    var: operator_full_name
+    #verbosity: 2
+
+# Wait for the operator to be in Succeeded state
+- name: Wait for {{ operator_full_name }} operator to be subscribed and be in Succeeded state
+  k8s_info:
+    <<: *ocp_conn_def
+    api_version: operators.coreos.com/v1alpha1
+    kind: ClusterServiceVersion
+    name: "{{ operator_full_name }}"
+    namespace: "{{ operator_namespace }}"
+  register: result
+  until: result | json_query("resources[0].status.phase=='Succeeded'")
+  retries: "{{ wait_for_subscription_retries }}"
+  delay: "{{ wait_for_subscription_delay }}"
+  when: operator_full_name | length > 0 

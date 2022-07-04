@@ -1,0 +1,8 @@
+# precheck_wait_secs: 10
+# wait_for_subscription_delay: 10
+# wait_for_subscription_retries: 100
+
+# NOTE: These below vars won't affect the installation as it is mentioned in the kustomize_dir
+# these variables are then only for checking ready state
+# es_namespace: 'elastic-monitoring'
+# es_instance_name: 'elasticsearch'

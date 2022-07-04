@@ -1,0 +1,4 @@
+ocp_api_url: https://api.cluster-kncsl.kncsl.sandbox890.opentlc.com:6443
+ocp_base_domain: cluster-kncsl.kncsl.sandbox890.opentlc.com
+ocp_api_token: 'sha256~REPLACE_ME_WITH_VAULT_PW'
+ocp_api_verify_ssl: false
