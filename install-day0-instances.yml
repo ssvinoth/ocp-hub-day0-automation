@@ -4,25 +4,25 @@
   gather_facts: false
   
   tasks:
-    # - name: install rh sso instance
-    #   include_role:
-    #     name: install_sso_instance
+    - name: install rh sso instance
+      include_role:
+        name: install_sso_instance
 
-    # - name: install acm MultiClusterHub instance
-    #   include_role:
-    #     name: install_acm_instance
+    - name: install acm MultiClusterHub instance
+      include_role:
+        name: install_acm_instance
 
-    # - name: install acs Central instance
-    #   include_role:
-    #     name: install_acs_instance
+    - name: install acs Central instance
+      include_role:
+        name: install_acs_instance
 
-    # - name: install elastic search and kibana instance
-    #   include_role:
-    #     name: install_es_kibana_instance
+    - name: install elastic search and kibana instance
+      include_role:
+        name: install_es_kibana_instance
 
-    # - name: configure elastic search and kibana routes
-    #   include_role:
-    #     name: config_es_kibana_instance
+    - name: configure elastic search and kibana routes
+      include_role:
+        name: config_es_kibana_instance
 
     - name: install logging clusterlogging and clusterloggingforwarder instance
       include_role:
