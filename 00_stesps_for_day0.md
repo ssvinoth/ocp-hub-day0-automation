@@ -28,7 +28,8 @@ Set the vars in the host_vars/localhost/
     - no config required
 4. acs operator
     - install central instance
-    -  [MANUAL] install securecluster (MANUAL)
+    - install securecluster
+    - configure local ocp cluster as securedcluster
 5. eck operator
     - install elastic search instance
     - install kibana instance
